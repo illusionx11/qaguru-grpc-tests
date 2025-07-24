@@ -148,8 +148,6 @@ def test_calculate_rate__with_negative_amount(
     grpc_client: NifflerCurrencyServiceClient,
     amount: float, mock: bool
 ):
-    if not mock:
-        pytest.xfail(reason="Негативные значения должны возвращать 0.0")
     try:
         response = grpc_client.calculate_rate(
             request=CalculateRequest(
@@ -160,8 +158,14 @@ def test_calculate_rate__with_negative_amount(
         )
         # Логика для основного сервера
         assert response.calculatedAmount == 0.0
+    except AssertionError:
+        if not mock:
+            pytest.xfail(reason="Негативные значения должны возвращать 0.0")
+        raise
     except grpc.RpcError as e:
         # Логика для mock сервера
         if mock:
             assert e.code() == grpc.StatusCode.NOT_FOUND
             assert "Request was not matched" in e.details()
+        else:
+            pytest.fail(f"Ошибка: {e.details()}\nКод ошибки: {e.code()}")
